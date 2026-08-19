@@ -1,2 +1,5 @@
 __pycache__/
 *.py[cod]
+.spotify_cache
+mediawidget_config.ps1
+MediaWidget/
