@@ -15,29 +15,15 @@ SpotifyWidget shows the currently playing track and album art and provides previ
 - Spotify OAuth login with a local callback
 - Refreshes playback state automatically
 - Remembers Spotify authentication in a local `.spotify_cache` file
-- Optional Px proxy support for restricted/corporate networks
+- Automatic Windows/system proxy detection through Px
+- Optional per-machine proxy overrides without editing tracked source files
 
 ## Requirements
 
 - Windows
-- Python 3
+- Python 3.10 or newer
 - A Spotify account with access to the Spotify Web API
 - A Spotify Developer application
-
-Python packages used by the widget:
-
-```text
-PyQt6
-requests
-spotipy
-```
-
-For the included corporate-network launcher, the environment also uses:
-
-```text
-px-proxy
-requests-negotiate-sspi
-```
 
 ## 1. Clone the repository
 
@@ -51,7 +37,7 @@ cd SpotifyWidget
 1. Open the Spotify Developer Dashboard.
 2. Create an application.
 3. Copy its **Client ID** and **Client Secret**.
-4. Add the following redirect URI to the application's allowed redirect URIs:
+4. Add this redirect URI to the application's allowed redirect URIs:
 
 ```text
 http://127.0.0.1:25566/callback
@@ -76,54 +62,12 @@ The included launcher expects the virtual environment to be named `MediaWidget`:
 ```powershell
 python -m venv MediaWidget
 .\MediaWidget\Scripts\python.exe -m pip install --upgrade pip
-.\MediaWidget\Scripts\python.exe -m pip install PyQt6 requests spotipy
+.\MediaWidget\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-### Normal network / personal computer
+## 5. Launch
 
-`main.py` currently has Px proxy support enabled by default:
-
-```python
-USE_PX_PROXY = True
-```
-
-If you are **not** using the Px proxy setup described below, change it to:
-
-```python
-USE_PX_PROXY = False
-```
-
-Then run the widget directly:
-
-```powershell
-.\MediaWidget\Scripts\python.exe .\main.py
-```
-
-On first launch, Spotify authentication opens in your browser. After authorization, Spotify redirects back to the local callback address and the token is cached locally.
-
-## Corporate / Px proxy setup
-
-The repository also contains `run_mediawidget.ps1` and `MediaWidget.bat` for a Px-based corporate proxy setup.
-
-Install the additional packages into the same virtual environment:
-
-```powershell
-.\MediaWidget\Scripts\python.exe -m pip install px-proxy requests-negotiate-sspi
-```
-
-The current launcher is configured to start Px on `127.0.0.1:3128` and forward through:
-
-```text
-rb-proxy-de.bosch.com:8080
-```
-
-`main.py` then sends Spotify/API traffic through:
-
-```text
-http://localhost:3128
-```
-
-With that setup, launch using:
+Use:
 
 ```powershell
 .\MediaWidget.bat
@@ -135,7 +79,76 @@ or:
 powershell.exe -ExecutionPolicy Bypass -File .\run_mediawidget.ps1
 ```
 
-If you are on another corporate network, change the proxy address in `run_mediawidget.ps1` to match your environment.
+On first launch, Spotify authentication opens in your browser. After authorization, Spotify redirects back to the local callback address and the token is cached locally.
+
+## Automatic proxy behavior
+
+`main.py` always talks to the local Px endpoint at:
+
+```text
+http://localhost:3128
+```
+
+The launcher starts Px automatically if it is not already running.
+
+The default proxy mode is:
+
+```text
+auto
+```
+
+In auto mode, Px uses proxy definitions from Windows Internet Options or proxy environment variables when present. If no upstream proxy is configured, Px connects directly. This means the same launcher can normally be used on a home network and on a corporate network without changing `main.py`.
+
+### Per-machine configuration
+
+If automatic detection is not enough, copy the example configuration:
+
+```powershell
+Copy-Item .\mediawidget_config.example.ps1 .\mediawidget_config.ps1
+```
+
+`mediawidget_config.ps1` is gitignored, so machine-specific proxy information will not be committed.
+
+Available modes:
+
+```powershell
+$PxMode = "auto"
+```
+
+Automatically discover the Windows/system proxy, or connect directly if none exists.
+
+```powershell
+$PxMode = "direct"
+```
+
+Force all traffic through Px to connect directly without an upstream proxy.
+
+```powershell
+$PxMode = "proxy"
+$PxProxy = "proxy.example.com:8080"
+```
+
+Force a particular upstream proxy.
+
+### Environment-variable overrides
+
+Environment variables take priority over `mediawidget_config.ps1`:
+
+```powershell
+$env:MEDIAWIDGET_PROXY_MODE = "proxy"
+$env:MEDIAWIDGET_UPSTREAM_PROXY = "proxy.example.com:8080"
+.\MediaWidget.bat
+```
+
+Valid values for `MEDIAWIDGET_PROXY_MODE` are:
+
+```text
+auto
+direct
+proxy
+```
+
+This is useful for temporary overrides without editing any files.
 
 ## Controls
 
@@ -153,18 +166,20 @@ The widget polls Spotify approximately every five seconds to refresh the current
 ## Project files
 
 ```text
-main.py                 Main PyQt6 widget and Spotify integration
-credentials.py          Spotify application credentials/configuration
-run_mediawidget.ps1     Windows launcher with Px proxy startup
-MediaWidget.bat         Hidden PowerShell launcher
-MediaWidget.ico         Application icon
-play.svg                Play icon
-skip-backward.svg       Previous-track icon
-skip-forward.svg        Next-track icon
-MediaWidget.lnk         Windows shortcut
+main.py                         Main PyQt6 widget and Spotify integration
+credentials.py                  Spotify application credentials/configuration
+run_mediawidget.ps1             Windows launcher and automatic Px setup
+MediaWidget.bat                 Hidden PowerShell launcher
+mediawidget_config.example.ps1  Optional local proxy configuration template
+requirements.txt                Python dependencies
+MediaWidget.ico                 Application icon
+play.svg                        Play icon
+skip-backward.svg               Previous-track icon
+skip-forward.svg                Next-track icon
+MediaWidget.lnk                 Windows shortcut
 ```
 
-The `MediaWidget/` virtual environment itself is created locally and should not be committed.
+Locally generated files such as the `MediaWidget/` virtual environment, `.spotify_cache`, `__pycache__`, and `mediawidget_config.ps1` are ignored by Git.
 
 ## Troubleshooting
 
@@ -180,19 +195,25 @@ Check that:
 
 Start playback on Spotify first. The widget reads the currently active Spotify playback session/device.
 
-### Connection errors outside the corporate network
+### Px starts but cannot reach Spotify
 
-Set:
+Try forcing direct mode temporarily:
 
-```python
-USE_PX_PROXY = False
+```powershell
+$env:MEDIAWIDGET_PROXY_MODE = "direct"
+.\MediaWidget.bat
 ```
 
-and run `main.py` directly instead of using the Px-specific launcher.
+If your network requires a specific proxy, create `mediawidget_config.ps1` and use:
+
+```powershell
+$PxMode = "proxy"
+$PxProxy = "proxy.example.com:8080"
+```
 
 ### `pythonw.exe not found`
 
-The launcher expects this path:
+The launcher expects:
 
 ```text
 MediaWidget\Scripts\pythonw.exe
@@ -202,10 +223,10 @@ Create the virtual environment using the setup commands above and keep the name 
 
 ### `px.exe not found`
 
-Install Px into the virtual environment:
+Install the project dependencies:
 
 ```powershell
-.\MediaWidget\Scripts\python.exe -m pip install px-proxy
+.\MediaWidget\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 ## Notes
