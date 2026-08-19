@@ -15,6 +15,7 @@ SpotifyWidget shows the currently playing track and album art and provides previ
 - Spotify OAuth login with a local callback
 - Refreshes playback state automatically
 - Remembers Spotify authentication in a local `.spotify_cache` file
+- One-click Windows setup
 - Automatic Windows/system proxy detection through Px
 - Optional per-machine proxy overrides without editing tracked source files
 
@@ -25,14 +26,20 @@ SpotifyWidget shows the currently playing track and album art and provides previ
 - A Spotify account with access to the Spotify Web API
 - A Spotify Developer application
 
-## 1. Clone the repository
+## Quick setup
+
+### 1. Download SpotifyWidget
+
+Clone the repository:
 
 ```powershell
 git clone https://github.com/mcneds/SpotifyWidget.git
 cd SpotifyWidget
 ```
 
-## 2. Create a Spotify application
+or download and extract the repository ZIP from GitHub.
+
+### 2. Create a Spotify application
 
 1. Open the Spotify Developer Dashboard.
 2. Create an application.
@@ -43,9 +50,9 @@ cd SpotifyWidget
 http://127.0.0.1:25566/callback
 ```
 
-## 3. Configure credentials
+### 3. Fill in `credentials.py`
 
-Open `credentials.py` and replace the placeholder values:
+Replace the placeholder values:
 
 ```python
 CLIENT_ID = "your client ID"
@@ -55,35 +62,34 @@ REDIRECT_URI = "http://127.0.0.1:25566/callback"
 
 Do not commit your real credentials to a public repository.
 
-## 4. Create the Python environment
+### 4. Double-click `setup.bat` once
 
-The included launcher expects the virtual environment to be named `MediaWidget`:
+`setup.bat` will automatically:
 
-```powershell
-python -m venv MediaWidget
-.\MediaWidget\Scripts\python.exe -m pip install --upgrade pip
-.\MediaWidget\Scripts\python.exe -m pip install -r requirements.txt
+- Find Python 3.
+- Create the `MediaWidget` virtual environment if it does not already exist.
+- Upgrade pip.
+- Install/update all packages from `requirements.txt`.
+- Check whether `credentials.py` still contains the distribution placeholders.
+- Open `credentials.py` in Notepad if credentials still need to be entered.
+
+The setup script is safe to run again later if dependencies change.
+
+### 5. Double-click `MediaWidget.bat` to launch
+
+After setup, normal use is simply:
+
+```text
+MediaWidget.bat
 ```
 
-## 5. Launch
-
-Use:
-
-```powershell
-.\MediaWidget.bat
-```
-
-or:
-
-```powershell
-powershell.exe -ExecutionPolicy Bypass -File .\run_mediawidget.ps1
-```
+The launcher starts the required local proxy helper when necessary and then launches the widget without leaving a console window open.
 
 On first launch, Spotify authentication opens in your browser. After authorization, Spotify redirects back to the local callback address and the token is cached locally.
 
 ## Automatic proxy behavior
 
-`main.py` always talks to the local Px endpoint at:
+`main.py` talks to the local Px endpoint at:
 
 ```text
 http://localhost:3128
@@ -97,7 +103,7 @@ The default proxy mode is:
 auto
 ```
 
-In auto mode, Px uses proxy definitions from Windows Internet Options or proxy environment variables when present. If no upstream proxy is configured, Px connects directly. This means the same launcher can normally be used on a home network and on a corporate network without changing `main.py`.
+In auto mode, Px uses proxy definitions from Windows Internet Options or proxy environment variables when present. If no upstream proxy is configured, Px connects directly. This means the same `MediaWidget.bat` launcher can normally be used on a home network and on a corporate network without changing `main.py`.
 
 ### Per-machine configuration
 
@@ -168,8 +174,9 @@ The widget polls Spotify approximately every five seconds to refresh the current
 ```text
 main.py                         Main PyQt6 widget and Spotify integration
 credentials.py                  Spotify application credentials/configuration
+setup.bat                       One-time Windows environment/dependency setup
 run_mediawidget.ps1             Windows launcher and automatic Px setup
-MediaWidget.bat                 Hidden PowerShell launcher
+MediaWidget.bat                 Normal hidden launcher
 mediawidget_config.example.ps1  Optional local proxy configuration template
 requirements.txt                Python dependencies
 MediaWidget.ico                 Application icon
@@ -182,6 +189,10 @@ MediaWidget.lnk                 Windows shortcut
 Locally generated files such as the `MediaWidget/` virtual environment, `.spotify_cache`, `__pycache__`, and `mediawidget_config.ps1` are ignored by Git.
 
 ## Troubleshooting
+
+### `setup.bat` says Python was not found
+
+Install Python 3 and make sure either the Windows Python launcher (`py`) or `python.exe` is available, then run `setup.bat` again.
 
 ### `Spotify auth error`
 
@@ -211,23 +222,15 @@ $PxMode = "proxy"
 $PxProxy = "proxy.example.com:8080"
 ```
 
-### `pythonw.exe not found`
+### `pythonw.exe not found` or `px.exe not found`
 
-The launcher expects:
+Run:
 
 ```text
-MediaWidget\Scripts\pythonw.exe
+setup.bat
 ```
 
-Create the virtual environment using the setup commands above and keep the name `MediaWidget`.
-
-### `px.exe not found`
-
-Install the project dependencies:
-
-```powershell
-.\MediaWidget\Scripts\python.exe -m pip install -r requirements.txt
-```
+It creates the expected virtual environment and installs the project dependencies.
 
 ## Notes
 
