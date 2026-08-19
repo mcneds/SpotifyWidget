@@ -23,12 +23,15 @@ rem Find a usable Python installation only if the virtual environment
 rem does not already exist.
 if not exist "MediaWidget\Scripts\python.exe" (
     echo [1/3] Creating Python environment...
+    set "VENV_CREATED="
 
     where py.exe >nul 2>&1
     if not errorlevel 1 (
         py -3 -m venv MediaWidget
-        if errorlevel 1 goto :python_fail
-    ) else (
+        if not errorlevel 1 set "VENV_CREATED=1"
+    )
+
+    if not defined VENV_CREATED (
         where python.exe >nul 2>&1
         if errorlevel 1 goto :python_missing
 
@@ -62,7 +65,7 @@ echo.
 echo     MediaWidget.bat
 echo.
 echo On first launch, Spotify will open a browser window so you can
- echo authorize the app.
+echo authorize the app.
 echo.
 pause
 exit /b 0
@@ -70,10 +73,10 @@ exit /b 0
 :credentials_missing
 echo.
 echo The Python environment is ready, but credentials.py still contains
- echo the distribution placeholder credentials.
+echo the distribution placeholder credentials.
 echo.
 echo A Spotify Developer app needs to be created and its Client ID and
- echo Client Secret copied into credentials.py.
+echo Client Secret copied into credentials.py.
 echo.
 echo Required redirect URI:
 echo     http://127.0.0.1:25566/callback
@@ -90,7 +93,7 @@ exit /b 1
 echo.
 echo ERROR: Python 3 was not found.
 echo Install Python 3, make sure the Python launcher or python.exe is
- echo available, then run setup.bat again.
+echo available, then run setup.bat again.
 goto :fail
 
 :python_fail
