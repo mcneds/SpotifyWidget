@@ -196,7 +196,9 @@ Install Python 3 and make sure either the Windows Python launcher (`py`) or `pyt
 
 ### `Spotify auth error`
 
-Check that:
+If a cached Spotify refresh token expires or is revoked, the widget automatically opens a new browser authorization. Finish signing in and the widget will resume without deleting `.spotify_cache` or restarting. If you close the authorization window before completing it, restart the widget to retry.
+
+For other authentication errors, check that:
 
 - `CLIENT_ID` and `CLIENT_SECRET` are correct.
 - `http://127.0.0.1:25566/callback` is registered as a redirect URI for your Spotify application.

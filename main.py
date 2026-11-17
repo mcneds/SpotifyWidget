@@ -8,7 +8,7 @@ import importlib.util
 
 import requests
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+from spotify_auth import RecoveringSpotifyOAuth
 
 from PyQt6.QtCore import (
     Qt,
@@ -132,7 +132,7 @@ def make_spotify_client():
         if HttpNegotiateAuth is not None:
             session.auth = HttpNegotiateAuth()
 
-    auth_manager = SpotifyOAuth(
+    auth_manager = RecoveringSpotifyOAuth(
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         redirect_uri=REDIRECT_URI,
@@ -250,6 +250,7 @@ class SpotifyWidget(QWidget):
     refresh_requested = pyqtSignal()
     error_requested = pyqtSignal(str, str)
     track_loaded = pyqtSignal(object, object, object)
+    reauthorization_requested = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -453,6 +454,8 @@ class SpotifyWidget(QWidget):
         self.refresh_requested.connect(self.request_update_song_info)
         self.error_requested.connect(self.show_error)
         self.track_loaded.connect(self.apply_track_state)
+        self.reauthorization_requested.connect(self.show_reauthorization_hint)
+        sp.auth_manager.on_reauthorization_required = self.reauthorization_requested.emit
 
         self.set_play_icon(False)
 
@@ -546,6 +549,9 @@ class SpotifyWidget(QWidget):
     # -------------------------------------------------------------------------
     # UI state
     # -------------------------------------------------------------------------
+    def show_reauthorization_hint(self):
+        self.set_hint("Spotify login required", "Authorize in your browser")
+
     def show_error(self, title, message):
         self.auth_failed = True
         self.loading = False
